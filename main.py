@@ -21,6 +21,7 @@ class PDFReader(Form):
         self.page = page
 
         self.bind_key("KEY_F", lambda f, c, data: self.next_page())
+        self.bind_key("KEY_B", lambda f, c, data: self.prev_page())
 
         self.popup = Popup(
             300,
@@ -71,6 +72,11 @@ class PDFReader(Form):
             self.page += 1
             self.view_page()
 
+    def prev_page(self):
+        if self.page > 0:
+            self.page -= 1
+            self.view_page()
+
     def go_to_page(self, page_num):
         if 0 < page_num <= self.info["Pages"]:
             self.page = page_num - 1
@@ -100,13 +106,17 @@ class PDFReader(Form):
                 if os.path.exists(fn):
                     return
                 else:
-                    cmd = ("convert -density 480 -monochrome -threshold 30 -geometry 480x800 -gravity center -background white -extent 480x800 %(pdf_file)s[%(page)s] %(outfile)s" %
+                    cmd = ("convert -density 300 -monochrome -threshold 30 -geometry 480x800 -gravity center -background white -extent 480x800 %(pdf_file)s[%(page)s] %(outfile)s" %
                            {"pdf_file": self.filename,
                             "page": page_num,
                             "outfile": fn})
                     os.system(cmd)
-                    print(page_num)
-                    self.extracted.append(page_num)
+
+                    if page_num in self.extracted:
+                        return
+                    else:
+                        self.extracted.append(page_num)
+                        
         t = Thread(target=do_extraction,
                    args=[start_at, self.info["Pages"]],
                    daemon=True)
