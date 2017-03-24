@@ -8,6 +8,7 @@ from pervasive import PervasiveDisplay
 from pil2epd import convert
 from paperui.ui import *
 from paperui.core import ScreenDrawer
+from re import compile
 
 class PDFReader(Form):
     def __init__(self, filename, page=0, page_size=(480, 800)):
@@ -15,13 +16,23 @@ class PDFReader(Form):
         self.filename = filename
         self.page_size = page_size
         self.info = self._get_info()
+        
         self.temp_dir = mkdtemp()
         self.extracted = []
         self.dirty = False
         self.page = page
-
+        page_size_rgx = r"[0-9]+"
         self.bind_key("KEY_F", lambda f, c, data: self.next_page())
+        self.bind_key("KEY_RIGHT", lambda f, c, data: self.next_page())
+        self.bind_key("C-KEY_F", lambda f, c, data: self.next_page())
         self.bind_key("KEY_B", lambda f, c, data: self.prev_page())
+        self.bind_key("KEY_LEFT", lambda f, c, data: self.prev_page())
+        self.bind_key("C-KEY_B", lambda f, c, data: self.prev_page())
+
+        self.bind_key("KEY_HOME", lambda f, c, data: self.go_to_page(1))
+        self.bind_key("KEY_END", lambda f, c, data: self.go_to_page(self.info["Pages"]))
+        self.bind_key("C-KEY_HOME", lambda f, c, data: self.go_to_page(1))
+        self.bind_key("C-KEY_END", lambda f, c, data: self.go_to_page(self.info["Pages"]))
 
         self.popup = Popup(
             300,
@@ -37,6 +48,9 @@ class PDFReader(Form):
 
         
         self.bind_key("KEY_G", self._show_jump_form)
+
+    def __destroy__(self):
+        os.system("rm -rf %s" % self.temp_dir)
 
     def _show_jump_form(self, f, c, data):
         self.show_popup = True
@@ -106,7 +120,7 @@ class PDFReader(Form):
                 if os.path.exists(fn):
                     return
                 else:
-                    cmd = ("convert -density 300 -monochrome -threshold 30 -geometry 480x800 -gravity center -background white -extent 480x800 %(pdf_file)s[%(page)s] %(outfile)s" %
+                    cmd = ("convert -density 300 -monochrome -geometry 480x800 -gravity center -background white -extent 480x800 %(pdf_file)s[%(page)s] %(outfile)s" %
                            {"pdf_file": self.filename,
                             "page": page_num,
                             "outfile": fn})
@@ -123,9 +137,6 @@ class PDFReader(Form):
         t.start()
 
     def show(self, image):
-        # display = PervasiveDisplay()
-        # display.send_image(convert(image))
-        # display.update_display()
         self.image = image
         self.dirty = True
         
