@@ -1,32 +1,32 @@
-import os, sys, math
+import os
 from threading import Thread
 from tempfile import mkdtemp
-from subprocess import Popen
 from PIL import Image, ImageDraw, ImageOps
-from array import *
 from pervasive import PervasiveDisplay
-from pil2epd import convert
 from paperui.ui import *
 from paperui.core import ScreenDrawer
 from convert import convert
 from enums import enum
 
-converters = enum(poppler=0,
-                  imagemagick=1)
-
 class PDFReader(Form):
-    def __init__(self, filename, page=0, page_size=(480, 800), converter=converters.poppler, threshold=127):
+    def __init__(self,
+                 filename,
+                 page=0,
+                 page_size=(480, 800),
+                 threshold=127):
+        
         Form.__init__(self, Widget())
+        
         self.filename = filename
         self.page_size = page_size
+        self.page = page
+        self.threshold = threshold
+                
         self.info = self._get_info()
         
         self.temp_dir = mkdtemp()
         self.extracted = []
         self.dirty = False
-        self.page = page
-        self.converter = converter
-        self.threshold = threshold
         
         self.bind_key("KEY_F", lambda f, c, data: self.next_page())
         self.bind_key("KEY_RIGHT", lambda f, c, data: self.next_page())
@@ -39,6 +39,7 @@ class PDFReader(Form):
         self.bind_key("KEY_END", lambda f, c, data: self.go_to_page(self.info["Pages"]))
         self.bind_key("C-KEY_HOME", lambda f, c, data: self.go_to_page(1))
         self.bind_key("C-KEY_END", lambda f, c, data: self.go_to_page(self.info["Pages"]))
+        
         self.bind_key("KEY_Q", self._quit)
 
         self.popup = Popup(
@@ -130,18 +131,10 @@ class PDFReader(Form):
                 if os.path.exists(fn):
                     return
                 else:
-                    if self.converter == converters.imagemagick:
-                        cmd = ("convert -density 300 -monochrome -geometry 480x800 -gravity center -background white -extent 480x800 %(pdf_file)s[%(page)s] %(outfile)s" %
-                               {"pdf_file": self.filename,
-                                "page": page_num,
-                                "outfile": fn})
-                        os.system(cmd)
-                    elif self.converter == converters.poppler:
-                        convert(self.filename,
-                                page_num,
-                                fn, threshold=self.threshold)
-                    else:
-                        raise Exception("Not implemented.")
+                    convert(self.filename,
+                            page_num,
+                            fn, threshold=self.threshold,
+                            page_size=self.page_size)
                     
                     if page_num in self.extracted:
                         return
@@ -156,7 +149,6 @@ class PDFReader(Form):
     def show(self, image):
         self.image = image
         self.dirty = True
-        
 
     def _draw(self, drawer):
         while not self.finished:
@@ -202,17 +194,9 @@ if __name__ == "__main__":
 
     args = argp.parse_args()
     
-    if args.imagemagick:
-        converter = converters.imagemagick
-    else:
-        converter = converters.poppler
-        
     reader = PDFReader(args.filename,
                        page=args.page-1,
-                       threshold=args.threshold,
-                       converter=converter)
+                       threshold=args.threshold)
     
     with ExclusiveKeyReader("/dev/input/event0") as keyboard:
         reader.run(keyboard, ScreenDrawer())
-
-    

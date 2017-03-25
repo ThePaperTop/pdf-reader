@@ -4,7 +4,7 @@ import cairo
 import urllib.request
 from PIL import Image
 
-def convert(fn, page_index, page_filename, threshold=127):
+def convert(fn, page_index, page_filename, page_size=(480, 800), threshold=127):
     url = "file://%s" % urllib.request.pathname2url(os.path.abspath(fn))
 
     document = Poppler.Document.new_from_file(url, password=None)
@@ -15,9 +15,13 @@ def convert(fn, page_index, page_filename, threshold=127):
     landscape = width > height
 
     if landscape:
-        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 800, 480)
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32,
+                                     page_size[1],
+                                     page_size[0])
     else:
-        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 480, 800)
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32,
+                                     page_size[0],
+                                     page_size[1])
 
     context = cairo.Context(surface)
 
@@ -26,9 +30,9 @@ def convert(fn, page_index, page_filename, threshold=127):
     context.paint()
 
     if landscape:
-        x_scale, y_scale = 800.0 / width, 480.0 / height
+        x_scale, y_scale = float(page_size[1]) / width, float(page_size[0]) / height
     else:
-        x_scale, y_scale = 480.0 / width, 800.0 / height
+        x_scale, y_scale = float(page_size[0]) / width, float(page_size[1]) / height
 
     if x_scale < y_scale:
         context.scale(x_scale, x_scale)
