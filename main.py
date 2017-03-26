@@ -7,7 +7,20 @@ from paperui.ui import *
 from paperui.core import ScreenDrawer
 from convert import convert
 from enums import enum
+from hashlib import md5
 
+def make_book_dir(book_fn):
+    with open(book_fn, "rb") as f:
+        dirname = md5(f.read()).hexdigest()
+
+    path = os.path.join(os.environ["HOME"],
+                        ".pdf-reader-cache",
+                        dirname)
+    
+    os.system("mkdir -p %s" % path)
+
+    return path
+    
 class PDFReader(Form):
     def __init__(self,
                  filename,
@@ -23,8 +36,8 @@ class PDFReader(Form):
         self.threshold = threshold
                 
         self.info = self._get_info()
-        
-        self.temp_dir = mkdtemp()
+
+        self.book_dir = make_book_dir(filename)
         self.extracted = []
         self.dirty = False
         
@@ -61,7 +74,7 @@ class PDFReader(Form):
         self.finish()
 
     def __destroy__(self):
-        os.system("rm -rf %s" % self.temp_dir)
+        os.system("rm -rf %s" % self.book_dir)
 
     def _show_jump_form(self, f, c, data):
         self.show_popup = True
@@ -89,7 +102,7 @@ class PDFReader(Form):
         return info
 
     def _page_filename(self, page):
-        return os.path.join(self.temp_dir,
+        return os.path.join(self.book_dir,
                             "%s.pbm" % page)
 
     def next_page(self):
@@ -180,11 +193,6 @@ if __name__ == "__main__":
                         help="The initial page to display",
                         type=int,
                         default=1)
-    
-    argp.add_argument("-i",
-                        "--imagemagick",
-                        help="Use ImageMagick instead of Poppler to read the PDF",
-                        action="store_true")
     
     argp.add_argument("-t",
                         "--threshold",
