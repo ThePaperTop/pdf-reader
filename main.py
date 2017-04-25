@@ -1,7 +1,7 @@
 import os
 from threading import Thread
 from tempfile import mkdtemp
-from PIL import Image, ImageDraw, ImageOps
+from PIL import Image, ImageDraw
 from pervasive import PervasiveDisplay
 from paperui.ui import *
 from paperui.core import ScreenDrawer
